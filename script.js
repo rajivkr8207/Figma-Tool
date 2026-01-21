@@ -1,92 +1,41 @@
-/*********************************
- * GLOBAL STATE
- *********************************/
+
 const state = {
     elements: [],
     selectedId: null,
     idCounter: 1
 };
 
-/*********************************
- * UNDO / REDO STACK
- *********************************/
 const undoStack = [];
 const redoStack = [];
 const MAX_HISTORY = 50;
 
 let isPanning = false;
 let panStart = { x: 0, y: 0 };
+let active = null;
 
 const viewport = {
     x: 0,
     y: 0,
     scale: 1
 };
-function applyViewportTransform() {
-    myCanvas.style.transform = `
-        translate(${viewport.x}px, ${viewport.y}px)
-        scale(${viewport.scale})
-    `;
-    myCanvas.style.transformOrigin = "0 0";
-}
+const CANVAS_WIDTH = 2000;
+const CANVAS_HEIGHT = 1200;
 
-/*********************************
- * DOM REFERENCES
- *********************************/
 const myCanvas = document.getElementById("myCanvas");
 const addRectBtn = document.getElementById("figrectangle");
 const addTextBtn = document.getElementById("figtext");
 const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const deleteBtn = document.getElementById("deleteBtn");
-
-/*********************************
- * LOCAL STORAGE
- *********************************/
+const widthInput = document.getElementById("sidebar-width");
+const heightInput = document.getElementById("sidebar-height");
 const STORAGE_KEY = "figma_dom_editor_v2";
 
-function saveState() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+function setupCanvasSize() {
+    myCanvas.style.width = CANVAS_WIDTH + "px";
+    myCanvas.style.height = CANVAS_HEIGHT + "px";
 }
 
-function loadState() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    try {
-        Object.assign(state, JSON.parse(raw));
-    } catch {
-        console.warn("Invalid saved data");
-    }
-}
-
-/*********************************
- * HISTORY (UNDO / REDO)
- *********************************/
-function pushHistory() {
-    undoStack.push(JSON.stringify(state));
-    if (undoStack.length > MAX_HISTORY) undoStack.shift();
-    redoStack.length = 0;
-}
-
-function undo() {
-    if (!undoStack.length) return;
-    redoStack.push(JSON.stringify(state));
-    Object.assign(state, JSON.parse(undoStack.pop()));
-    saveState();
-    render();
-}
-
-function redo() {
-    if (!redoStack.length) return;
-    undoStack.push(JSON.stringify(state));
-    Object.assign(state, JSON.parse(redoStack.pop()));
-    saveState();
-    render();
-}
-
-/*********************************
- * ELEMENT FACTORY
- *********************************/
 function createElementData(type) {
     const width = type === "text" ? 80 : 120;
     const height = type === "text" ? 30 : 80;
@@ -102,11 +51,46 @@ function createElementData(type) {
         text: type === "text" ? "Text" : "",
         background: type === "text" ? "transparent" : "#ffffff",
         borderColor: type === "text" ? "transparent" : "#00ffff",
-        color: '#ffffff',
+        color: type === "text" ? '#000000' : '#ffffff',
         borderRadius: type === "text" ? undefined : 0,
         fontSize: type === "text" ? 16 : undefined,
         zIndex: state.idCounter
     };
+}
+function applyViewportTransform() {
+    myCanvas.style.transform = `
+        translate(${viewport.x}px, ${viewport.y}px)
+        scale(${viewport.scale})
+    `;
+    myCanvas.style.transformOrigin = "0 0";
+}
+
+function centerCanvas() {
+    const rect = canvasViewport.getBoundingClientRect();
+
+    viewport.x = (rect.width - CANVAS_WIDTH) / 2;
+    viewport.y = (rect.height - CANVAS_HEIGHT) / 2;
+    viewport.scale = 1;
+}
+
+function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    try {
+        Object.assign(state, JSON.parse(raw));
+    } catch {
+        console.warn("Invalid saved data");
+    }
+}
+
+function pushHistory() {
+    undoStack.push(JSON.stringify(state));
+    if (undoStack.length > MAX_HISTORY) undoStack.shift();
+    redoStack.length = 0;
 }
 
 function render() {
@@ -159,15 +143,9 @@ function render() {
     updateSidebar();
     updatePropertiesSidebar();
 }
-
-/*********************************
- * RESIZE HANDLE
- *********************************/
-// Create resize handles for all 4 corners and edges
 function createResizeHandle() {
     const wrapper = document.createElement("div");
 
-    // ROTATE HANDLE
     const rotate = document.createElement("div");
     rotate.className = "rotate-handle";
     rotate.dataset.handle = "rotate";
@@ -186,7 +164,6 @@ function createResizeHandle() {
     });
     wrapper.appendChild(rotate);
 
-    // RESIZE HANDLES
     const positions = [
         { class: "nw", style: { left: "-7px", top: "-7px", cursor: "nwse-resize" } },
         { class: "ne", style: { right: "-7px", top: "-7px", cursor: "nesw-resize" } },
@@ -213,7 +190,21 @@ function createResizeHandle() {
 
     return wrapper;
 }
+function undo() {
+    if (!undoStack.length) return;
+    redoStack.push(JSON.stringify(state));
+    Object.assign(state, JSON.parse(undoStack.pop()));
+    saveState();
+    render();
+}
 
+function redo() {
+    if (!redoStack.length) return;
+    undoStack.push(JSON.stringify(state));
+    Object.assign(state, JSON.parse(redoStack.pop()));
+    saveState();
+    render();
+}
 
 function selectElement(id) {
     state.selectedId = id;
@@ -221,10 +212,34 @@ function selectElement(id) {
     render();
 }
 
-/*********************************
- * DRAG / RESIZE
- *********************************/
-let active = null;
+function resizeElement(el, dx, dy, handle, canvasRect) {
+    const MIN_W = 30;
+    const MIN_H = 20;
+
+    if (handle.includes("e")) {
+        el.width = clamp(el.width + dx, MIN_W, canvasRect.width - el.x);
+    }
+
+    if (handle.includes("s")) {
+        el.height = clamp(el.height + dy, MIN_H, canvasRect.height - el.y);
+    }
+
+    if (handle.includes("w")) {
+        const newWidth = clamp(el.width - dx, MIN_W, el.x + el.width);
+        el.x += el.width - newWidth;
+        el.width = newWidth;
+    }
+
+    if (handle.includes("n")) {
+        const newHeight = clamp(el.height - dy, MIN_H, el.y + el.height);
+        el.y += el.height - newHeight;
+        el.height = newHeight;
+    }
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(value, max));
+}
 
 myCanvas.addEventListener("mousedown", e => {
     const node = e.target.closest(".editor-element");
@@ -284,46 +299,16 @@ window.addEventListener("mousemove", e => {
     render();
 });
 
-function resizeElement(el, dx, dy, handle, canvasRect) {
-    const MIN_W = 30;
-    const MIN_H = 20;
-
-    if (handle.includes("e")) {
-        el.width = clamp(el.width + dx, MIN_W, canvasRect.width - el.x);
-    }
-
-    if (handle.includes("s")) {
-        el.height = clamp(el.height + dy, MIN_H, canvasRect.height - el.y);
-    }
-
-    if (handle.includes("w")) {
-        const newWidth = clamp(el.width - dx, MIN_W, el.x + el.width);
-        el.x += el.width - newWidth;
-        el.width = newWidth;
-    }
-
-    if (handle.includes("n")) {
-        const newHeight = clamp(el.height - dy, MIN_H, el.y + el.height);
-        el.y += el.height - newHeight;
-        el.height = newHeight;
-    }
-}
-function clamp(value, min, max) {
-    return Math.max(min, Math.min(value, max));
-}
-
-
 window.addEventListener("mouseup", () => {
     if (active) saveState();
     active = null;
 });
 
-/*********************************
- * ADD ELEMENTS
- *********************************/
+
 addRectBtn.onclick = () => {
     pushHistory();
     state.elements.push(createElementData("rectangle"));
+    normalizeZIndex();
     saveState();
     render();
 };
@@ -331,13 +316,10 @@ addRectBtn.onclick = () => {
 addTextBtn.onclick = () => {
     pushHistory();
     state.elements.push(createElementData("text"));
+    normalizeZIndex();
     saveState();
     render();
 };
-
-/*********************************
- * DELETE ELEMENT
- *********************************/
 function deleteSelected() {
     if (!state.selectedId) return;
     pushHistory();
@@ -349,9 +331,6 @@ function deleteSelected() {
 
 deleteBtn?.addEventListener("click", deleteSelected);
 
-/*********************************
- * SIDEBAR LIST
- *********************************/
 function updateSidebar() {
     const sidebar = document.querySelector(".leftsidebar ul");
     if (!sidebar) return;
@@ -428,21 +407,9 @@ function moveLayerDown(index) {
     saveState();
     render();
 }
-addRectBtn.onclick = () => {
-    pushHistory();
-    state.elements.push(createElementData("rectangle"));
-    normalizeZIndex();
-    saveState();
-    render();
-};
-
-addTextBtn.onclick = () => {
-    pushHistory();
-    state.elements.push(createElementData("text"));
-    normalizeZIndex();
-    saveState();
-    render();
-};
+function getSelected() {
+    return state.elements.find(el => el.id === state.selectedId);
+}
 
 // Show/hide and update the text edit section in the sidebar based on selection
 function updateTextEditSection() {
@@ -451,7 +418,7 @@ function updateTextEditSection() {
     const textcolorSection = document.getElementById('text-color-section');
 
     if (!textSection) return;
-    
+
 
     if (el && el.type === 'text') {
         textSection.style.display = '';
@@ -466,8 +433,6 @@ function updateTextEditSection() {
     }
 }
 
-// Call updateTextEditSection when rendering sidebars
-// Patch updateSidebar and updatePropertiesSidebar to call it after their work
 const _orig_updateSidebar = updateSidebar;
 updateSidebar = function () {
     _orig_updateSidebar();
@@ -478,14 +443,8 @@ updatePropertiesSidebar = function () {
     _orig_updatePropertiesSidebar();
     updateTextEditSection();
 };
-/*********************************
- * RIGHT SIDEBAR
- *********************************/
-function getSelected() {
-    return state.elements.find(el => el.id === state.selectedId);
-}
-const widthInput = document.getElementById("sidebar-width");
-const heightInput = document.getElementById("sidebar-height");
+
+
 function updatePropertiesSidebar() {
     const el = getSelected();
     if (!el) return;
@@ -501,6 +460,7 @@ function updatePropertiesSidebar() {
     }
     const radiusInput = document.getElementById("sidebar-border-radius");
     const radiusSection = document.getElementById("border-radius-section");
+    const divproperties = document.getElementById('divproperties')
 
     if (radiusSection && radiusInput) {
         if (el.type !== "text") {
@@ -517,7 +477,10 @@ function updatePropertiesSidebar() {
     if (bordercolorvalue) bordercolorvalue.textContent = el.borderColor
     if (text && el.type === "text") textcolor.value = el.color;
     if (text && el.type === "text") text.value = el.text;
-    if (widthInput) widthInput.value = el.width;
+    if (widthInput) {
+        widthInput.value = el.width;
+        divproperties.style.display = ''
+    }
     if (heightInput) heightInput.value = el.height;
 }
 function normalizeZIndex() {
@@ -545,15 +508,13 @@ heightInput.addEventListener('input', function (e) {
     render();
     updatePropertiesSidebar();
 })
-// --- Optimized color sidebar logic including clear color ("none") handler ---
 
-// Helper function to update color value display
+
 function updateSidebarColorValue(val) {
     const colorValueEl = document.getElementById("sidebar-color-value");
     if (colorValueEl) colorValueEl.textContent = val || 'none';
 }
 
-// Background color input logic
 const sidebarBgColorInput = document.getElementById("sidebar-bgcolor");
 if (sidebarBgColorInput) {
     sidebarBgColorInput.addEventListener("input", e => {
@@ -567,7 +528,6 @@ if (sidebarBgColorInput) {
     });
 }
 
-// "None" button logic for background (sets transparent)
 const sidebarBgColorNoneBtn = document.getElementById("sidebar-bgcolor-none");
 if (sidebarBgColorNoneBtn) {
     sidebarBgColorNoneBtn.addEventListener("click", () => {
@@ -581,8 +541,6 @@ if (sidebarBgColorNoneBtn) {
         updateSidebarColorValue('none');
     });
 }
-
-// Border color input logic
 const sidebarBorderColorInput = document.getElementById("sidebar-border-color");
 const sidebordercolorvalue = document.getElementById('sidebar-border-color-value')
 
@@ -597,7 +555,6 @@ if (sidebarBorderColorInput) {
     });
 }
 
-// "None" button logic for border color (sets transparent for border)
 const sidebarBorderColorNoneBtn = document.getElementById("sidebar-border-color-none");
 if (sidebarBorderColorNoneBtn) {
     sidebarBorderColorNoneBtn.addEventListener("click", () => {
@@ -615,7 +572,6 @@ if (sidebarBorderColorNoneBtn) {
     });
 }
 
-// Patch updatePropertiesSidebar for border color
 (function patchBorderColorUpdate() {
     const _orig_updatePropertiesSidebar = updatePropertiesSidebar;
     updatePropertiesSidebar = function () {
@@ -628,7 +584,6 @@ if (sidebarBorderColorNoneBtn) {
     };
 })();
 
-// Patch render to set border color for elements
 const _orig_render_forBorder = render;
 render = function () {
     _orig_render_forBorder.apply(this, arguments);
@@ -641,7 +596,6 @@ render = function () {
                 if (!node.style.borderWidth) node.style.borderWidth = "2px";
             }
         }
-        // Also handle transparent BG
         if (el.background === "transparent") {
             const node = document.querySelector(`.editor-element[data-id="${el.id}"]`);
             if (node) node.style.background = "transparent";
@@ -649,7 +603,6 @@ render = function () {
     });
 };
 
-// Text color input
 const sidebarTextColorInput = document.getElementById("sidebar-text-color");
 if (sidebarTextColorInput) {
     sidebarTextColorInput.addEventListener("input", e => {
@@ -662,7 +615,6 @@ if (sidebarTextColorInput) {
     });
 }
 
-// Patch updatePropertiesSidebar to update current text color for text elements
 (function patchTextColorUpdate() {
     const _orig_updatePropertiesSidebar = updatePropertiesSidebar;
     updatePropertiesSidebar = function () {
@@ -673,8 +625,6 @@ if (sidebarTextColorInput) {
         }
     };
 })();
-
-// Patch render to update text element color
 const _orig_render = render;
 render = function () {
     _orig_render.apply(this, arguments);
@@ -708,11 +658,7 @@ document.getElementById("sidebar-rotate")?.addEventListener("input", e => {
 });
 const KEYBOARD_MOVE_STEP = 5;
 
-/*********************************
- * KEYBOARD SHORTCUTS
- *********************************/
 document.addEventListener("keydown", function (e) {
-    // --- Undo/Redo shortcuts (always enabled if not typing in a field)
     if (
         document.activeElement &&
         (document.activeElement.tagName === "INPUT" ||
@@ -733,7 +679,6 @@ document.addEventListener("keydown", function (e) {
         return;
     }
 
-    // --- Keyboard movement/element actions (only if something selected)
     const el = getSelected();
     if (!el) return;
 
@@ -791,9 +736,6 @@ document.addEventListener("keydown", function (e) {
     }
 });
 
-/*********************************
- * BUTTON SHORTCUTS
- *********************************/
 undoBtn?.addEventListener("click", undo);
 redoBtn?.addEventListener("click", redo);
 
@@ -845,14 +787,10 @@ window.addEventListener("mousemove", e => {
 
     // Get canvas viewport boundaries
     const canvasContainer = document.getElementById('canvasViewport');
-    const rect = canvasContainer.getBoundingClientRect();
 
     // Calculate new viewport.x and viewport.y
     let newX = e.clientX - panStart.x;
     let newY = e.clientY - panStart.y;
-
-    // Limit X so you can't pan out of bounds (no whitespace left/right)
-    // Clamp so left side can't go past left edge, right side can't go past right edge
     const maxPanX = 0;
     const minPanX = -(myCanvas.offsetWidth * viewport.scale - canvasContainer.offsetWidth);
     if (myCanvas.offsetWidth * viewport.scale > canvasContainer.offsetWidth) {
@@ -861,7 +799,6 @@ window.addEventListener("mousemove", e => {
         newX = 0;
     }
 
-    // Limit Y so you can't pan out of bounds (no whitespace top/bottom)
     const maxPanY = 0;
     const minPanY = -(myCanvas.offsetHeight * viewport.scale - canvasContainer.offsetHeight);
     if (myCanvas.offsetHeight * viewport.scale > canvasContainer.offsetHeight) {
@@ -881,12 +818,9 @@ window.addEventListener("mouseup", () => {
 myCanvas.addEventListener("wheel", e => {
     e.preventDefault();
 
-    // More sensitive/gradual zoom parameters
     const minScale = 0.8;
     const maxScale = 2.5;
     const zoomFactor = 0.08; // Less than 0.1 for finer control
-
-    // If the user holds Ctrl, zoom faster (power user)
     let sensitivity = zoomFactor;
     if (e.ctrlKey) sensitivity = zoomFactor * 2;
 
@@ -909,6 +843,8 @@ myCanvas.addEventListener("wheel", e => {
 
 window.addEventListener("DOMContentLoaded", () => {
     loadState();
+    setupCanvasSize();
+    centerCanvas();
     normalizeZIndex();
     render();
 });
@@ -1030,3 +966,15 @@ function exportAsHTML() {
 }
 document.getElementById("exportJsonBtn")?.addEventListener("click", exportAsJSON);
 document.getElementById("exportHtmlBtn")?.addEventListener("click", exportAsHTML);
+
+
+const feature = document.getElementById('feature')
+const closebtn = document.getElementById('feaclosebtn')
+const featurebtn = document.getElementById('featurebtn')
+closebtn.addEventListener('click', () => {
+    feature.classList.add('hidden')
+
+})
+featurebtn.addEventListener('click', () => {
+    feature.classList.remove('hidden')
+})

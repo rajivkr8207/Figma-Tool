@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>web design</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="./style.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.8.0/fonts/remixicon.css" rel="stylesheet" />
@@ -12,7 +12,6 @@
 
 <body>
     <header class=" w-full flex justify-center z-10 items-center py-3 px-5 bg-transparent text-white  absolute top-0">
-
         <div class="flex gap-4 text-xl backdrop-blur bg-slate-800/30 px-4 py-2 rounded-lg  border border-light-50/20 ">
             <button id="figrectangle"
                 class="bg-black/40 backdrop-blur-lg hover:bg-black rounded px-4 py-2 text-2xl transition">
@@ -36,7 +35,6 @@
                 <i class="ri-delete-bin-line"></i>
             </button>
         </div>
-
     </header>
     <div
         class="leftsidebar border-r border-gray-700  bg-gray-800/30 backdrop-blur-lg text-white font-semibold absolute  top-0 w-[15rem] h-screen py-24 px-4 flex gap-8 flex-col z-50">
@@ -60,6 +58,7 @@
             <p class="text-gray-400 text-sm mb-4">Adjust layer and content styles here.</p>
         </div>
         <div class="flex flex-col gap-4">
+          <div id="divproperties" class="flex flex-col gap-4" style="display: none;" >
             <div class="flex justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900">
                 <span class="uppercase tracking-wider text-gray-300">W</span>
                 <input id="sidebar-width" type="number" min="1"
@@ -118,6 +117,7 @@
                         class="font-semibold w-16 max-w-[4.5rem] bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-600" />
                 </div>
             </div>
+          </div>
 
             <!-- Text edit (shown only for text element selection) -->
             <div id="text-edit-section" class="flex flex-col gap-1 border border-gray-700 rounded px-4 py-2 bg-gray-900"
@@ -157,7 +157,39 @@
                     Export HTML</button>
             </div>
         </div>
+
+    <button id="featurebtn"
+        class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded shadow mt-4 mb-2 transition">
+        Show Features
+    </button>
     </div>
+
+    <section id="feature" class="w-full hidden h-screen fixed top-0 left-0 z-50 flex justify-center bg-black/20 backdrop-blur-lg items-center">
+        <button id="feaclosebtn" class="absolute cursor-pointer px-3 py-1 top-5 right-5 text-2xl bg-red-500 text-white rounded-full">
+            <i class="ri-close-line"></i>
+        </button>
+        
+        <div class="bg-gray-800 rounded-lg shadow-lg p-8 text-white w-[450px] max-w-full">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <i class="ri-magic-line text-green-400"></i>
+                Feature: What Can This App Do?
+            </h2>
+            <ul class="list-disc pl-5 space-y-2 text-base leading-relaxed">
+                <li>Edit and rearrange various elements (text, shapes) on a canvas visually and interactively.</li>
+                <li>Customize properties such as position, size, rotation, border, background, and z-index.</li>
+                <li>Add, edit, and style text boxes including font size and color customization.</li>
+                <li>Export your design as JSON for later editing or as HTML for use in your projects.</li>
+                <li>Live preview of all changes as you edit each element.</li>
+                <li>User-friendly drag and drop interface for easy element positioning.</li>
+
+                <li>Pan and zoom the canvas: zoom in/out and move left/right drag.</li>
+
+            </ul>
+        </div>
+
+        </div>
+
+    </section>
 
     <script src="./script.js"></script>
 </body>
