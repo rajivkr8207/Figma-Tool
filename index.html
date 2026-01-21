@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="./style.css">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.8.0/fonts/remixicon.css" rel="stylesheet" />
+</head>
+
+<body>
+    <header class=" w-full flex justify-center z-10 items-center py-3 px-5 bg-transparent text-white  absolute top-0">
+
+        <div class="flex gap-4 text-xl backdrop-blur bg-slate-800/30 px-4 py-2 rounded-lg  border border-light-50/20 ">
+            <button id="figrectangle"
+                class="bg-black/40 backdrop-blur-lg hover:bg-black rounded px-4 py-2 text-2xl transition">
+                <i class="ri-rectangle-line cursor-pointer"></i>
+            </button>
+
+            <button id="figtext"
+                class="bg-black/40 backdrop-blur-lg hover:bg-black rounded px-4 py-2 text-2xl transition">
+                <i class="ri-text cursor-pointer"></i>
+            </button>
+            <button id="undoBtn"
+                class="bg-black/40 backdrop-blur-lg hover:bg-black rounded px-4 py-2 text-2xl transition">
+                <i class="ri-arrow-go-back-line"></i>
+            </button>
+            <button id="redoBtn"
+                class="bg-black/40 backdrop-blur-lg hover:bg-black rounded px-4 py-2 text-2xl transition">
+                <i class="ri-arrow-go-forward-line"></i>
+            </button>
+            <button id="deleteBtn"
+                class="bg-red-700/70 backdrop-blur-lg hover:bg-red-600 rounded px-4 py-2 text-2xl transition">
+                <i class="ri-delete-bin-line"></i>
+            </button>
+        </div>
+
+    </header>
+    <div
+        class="leftsidebar border-r border-gray-700  bg-gray-800/30 backdrop-blur-lg text-white font-semibold absolute  top-0 w-[15rem] h-screen py-24 px-4 flex gap-8 flex-col z-50">
+        <p class="text-2xl ">Layer</p>
+        <ul class="flex flex-col capitalize  gap-3  max-h-[100%] overflow-y-auto ">
+
+        </ul>
+    </div>
+
+    <div id="canvasViewport" class="w-full h-screen overflow-hidden bg-gray-800">
+        <div id="myCanvas" class="relative w-full h-full bg-black/50 backdrop-blur-lg"></div>
+    </div>
+
+    <div id="rightsidebar" class="rightsidebar z-20 bg-gray-800/30 backdrop-blur-lg text-white font-semibold fixed top-0 right-0 h-screen py-20 px-6 flex flex-col gap-10 shadow-lg border-l border-gray-700
+        w-full max-w-[20rem] sm:w-[16rem] md:w-[18rem] lg:w-[20rem] 
+        sm:py-10 sm:px-4
+        transition-all duration-200
+        " style="width:100vw; max-width:20rem">
+        <div>
+            <p class="text-2xl mb-2">Properties</p>
+            <p class="text-gray-400 text-sm mb-4">Adjust layer and content styles here.</p>
+        </div>
+        <div class="flex flex-col gap-4">
+            <div class="flex justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900">
+                <span class="uppercase tracking-wider text-gray-300">W</span>
+                <input id="sidebar-width" type="number" min="1"
+                    class="font-semibold w-16 max-w-[4.5rem] bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+            <div class="flex justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900">
+                <span class="uppercase tracking-wider text-gray-300">H</span>
+                <input id="sidebar-height" type="number" min="1"
+                    class="font-semibold w-16 max-w-[4.5rem] bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            </div>
+
+            <div
+                class="flex flex-col xs:flex-row sm:flex-row justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900 gap-2">
+                <div class="flex items-center gap-2 w-full">
+                    <input id="sidebar-bgcolor" type="color"
+                        class="w-7 h-7 min-w-[1.75rem] border-0 bg-transparent p-0" />
+                    <span id="sidebar-color-value" class="text-xs text-gray-300"></span>
+                    <button id="sidebar-bgcolor-none" title="Set BGColor to none/transparent"
+                        class="ml-2 px-2 py-1 bg-gray-700 text-xs rounded hover:bg-gray-600 transition" type="button">
+                        None
+                    </button>
+                </div>
+                <span class="uppercase text-xs text-gray-300 whitespace-nowrap mt-2 sm:mt-0 self-end">BGColor</span>
+            </div>
+            <div
+                class="flex flex-col xs:flex-row sm:flex-row justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900 gap-2">
+                <div class="w-full flex justify-between items-center gap-2">
+                    <input id="sidebar-border-color" type="color"
+                        class="w-7 h-7 min-w-[1.75rem] border-0 bg-transparent p-0" />
+                    <span id="sidebar-border-color-value" class="text-xs text-gray-300"></span>
+                    <button id="sidebar-border-color-none" title="Set border color to none/transparent"
+                        class="ml-2 px-2 py-1 bg-gray-700 text-xs rounded hover:bg-gray-600 transition" type="button">
+                        None
+                    </button>
+                    <label for="sidebar-border-color" class="uppercase text-gray-300 text-xs whitespace-nowrap">border
+                        col</label>
+                </div>
+            </div>
+
+            <div id="border-radius-section"
+                class=" flex flex-col xs:flex-row sm:flex-row justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900 gap-2"
+                style="display: none;">
+                <div class="w-full flex justify-between items-center gap-2">
+                    <label for="sidebar-border-radius" class="uppercase text-gray-300 text-xs whitespace-nowrap">Border
+                        Radius</label>
+                    <input id="sidebar-border-radius" type="number" min="0" max="50"
+                        class="font-semibold w-16 max-w-[4.5rem] bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                </div>
+            </div>
+            <div
+                class="flex flex-col xs:flex-row sm:flex-row justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900 gap-2">
+                <div class="w-full flex justify-between items-center gap-2">
+                    <label for="sidebar-rotate" class="uppercase text-gray-300 text-xs whitespace-nowrap">Rotate
+                        (&deg;)</label>
+                    <input id="sidebar-rotate" type="number" min="-180" max="180"
+                        class="font-semibold w-16 max-w-[4.5rem] bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-600" />
+                </div>
+            </div>
+
+            <!-- Text edit (shown only for text element selection) -->
+            <div id="text-edit-section" class="flex flex-col gap-1 border border-gray-700 rounded px-4 py-2 bg-gray-900"
+                style="display: none;">
+                <div>
+                    <label for="sidebar-text-content" class="uppercase tracking-wider text-gray-300 text-xs mb-1">Text
+                        Content</label>
+                    <input id="sidebar-text-content" type="text"
+                        class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-base focus:outline-none focus:ring-2 focus:ring-blue-600 placeholder-gray-500"
+                        placeholder="Edit text here..." />
+                </div>
+                <div class="flex flex-col gap-1 mt-2">
+                    <label for="sidebar-font-size" class="uppercase tracking-wider text-gray-300 text-xs mb-1">Font
+                        Size</label>
+                    <input id="sidebar-font-size" type="number" min="8" max="200"
+                        class="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1 text-white text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600"
+                        placeholder="Enter font size..." />
+                </div>
+            </div>
+            <div id="text-color-section"
+                class="flex justify-between items-center border border-gray-700 rounded px-4 py-2 bg-gray-900"
+                style="display: none;">
+                <div class="w-full flex justify-between items-center gap-2">
+                    <input id="sidebar-text-color" type="color" class="w-7 h-7 border-0 bg-transparent p-0" />
+                    <label for="sidebar-text-color" class="uppercase tracking-wider text-gray-300">Text color</label>
+                </div>
+            </div>
+            <div
+                class="flex flex-col gap-3 items-center border border-gray-700 rounded px-4 py-2 bg-gray-900 justify-center">
+                <button id="exportJsonBtn"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-5 rounded flex items-center gap-2 transition w-full justify-center text-base sm:text-sm">
+                    <i class="ri-download-2-line text-xl"></i>
+                    Export JSON</button>
+                <button id="exportHtmlBtn"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-5 rounded flex items-center gap-2 transition w-full justify-center text-base sm:text-sm">
+                    <i class="ri-download-2-line text-xl"></i>
+                    Export HTML</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+
+</html>
