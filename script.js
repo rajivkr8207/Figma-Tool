@@ -37,8 +37,8 @@ function setupCanvasSize() {
 }
 
 function createElementData(type) {
-    const width = type === "text" ? 80 : 120;
-    const height = type === "text" ? 30 : 80;
+    const width = type === "text" ? 100 : 120;
+    const height = type === "text" ? 40 : 80;
 
     return {
         id: `el_${state.idCounter++}`,
@@ -127,7 +127,7 @@ function render() {
                 alignItems: "center",
                 justifyContent: "center",
                 fontWeight: "bold",
-                fontSize: (el.fontSize || 16) + "px", // ✅ APPLY FONT SIZE
+                fontSize: (el.fontSize || 8) + "px", // ✅ APPLY FONT SIZE
                 color: el.color || "#ffffff"
             });
             node
@@ -140,7 +140,7 @@ function render() {
         myCanvas.appendChild(node);
 
     });
-    updateSidebar();
+    renderSidebar();
     updatePropertiesSidebar();
 }
 function createResizeHandle() {
@@ -308,6 +308,7 @@ window.addEventListener("mouseup", () => {
 addRectBtn.onclick = () => {
     pushHistory();
     state.elements.push(createElementData("rectangle"));
+    selectElement(state.elements[state.elements.length - 1].id)
     normalizeZIndex();
     saveState();
     render();
@@ -316,6 +317,7 @@ addRectBtn.onclick = () => {
 addTextBtn.onclick = () => {
     pushHistory();
     state.elements.push(createElementData("text"));
+    selectElement(state.elements[state.elements.length - 1].id)
     normalizeZIndex();
     saveState();
     render();
@@ -331,29 +333,26 @@ function deleteSelected() {
 
 deleteBtn?.addEventListener("click", deleteSelected);
 
-function updateSidebar() {
+function renderLayerSidebar() {
     const sidebar = document.querySelector(".leftsidebar ul");
     if (!sidebar) return;
 
     sidebar.innerHTML = "";
 
-    // Render from TOP to BOTTOM (reverse order)
     [...state.elements].reverse().forEach((el, visualIndex) => {
         const realIndex = state.elements.length - 1 - visualIndex;
 
         const li = document.createElement("li");
         li.className = `
-            flex items-center justify-between gap-2
+            flex items-center justify-between rounded-lg gap-2
             p-2 border cursor-pointer
-            ${el.id === state.selectedId ? "bg-blue-600 text-white" : ""}
+            ${el.id === state.selectedId ? "bg-purple-600 text-white" : ""}
         `;
 
-        // Label
         const label = document.createElement("span");
         label.textContent = `${el.type} (${el.id})`;
         label.onclick = () => selectElement(el.id);
 
-        // Controls
         const controls = document.createElement("div");
         controls.className = "flex gap-1";
 
@@ -379,6 +378,30 @@ function updateSidebar() {
 
         sidebar.appendChild(li);
     });
+}
+function updateTextEditSection() {
+    const el = getSelected();
+    const textSection = document.getElementById('text-edit-section');
+    const textcolorSection = document.getElementById('text-color-section');
+
+    if (!textSection) return;
+
+
+    if (el && el.type === 'text') {
+        textSection.style.display = '';
+        textcolorSection.style.display = ''
+        // Also update the input's value to match state
+        const input = textSection.querySelector('#sidebar-text-content');
+        if (input) input.value = el.text;
+    } else {
+        textSection.style.display = 'none';
+        textcolorSection.style.display = 'none';
+
+    }
+}
+function renderSidebar() {
+    renderLayerSidebar();
+    updateTextEditSection();
 }
 function moveLayerUp(index) {
     if (index >= state.elements.length - 1) return;
@@ -411,41 +434,11 @@ function getSelected() {
     return state.elements.find(el => el.id === state.selectedId);
 }
 
-// Show/hide and update the text edit section in the sidebar based on selection
-function updateTextEditSection() {
-    const el = getSelected();
-    const textSection = document.getElementById('text-edit-section');
-    const textcolorSection = document.getElementById('text-color-section');
-
-    if (!textSection) return;
 
 
-    if (el && el.type === 'text') {
-        textSection.style.display = '';
-        textcolorSection.style.display = ''
-        // Also update the input's value to match state
-        const input = textSection.querySelector('#sidebar-text-content');
-        if (input) input.value = el.text;
-    } else {
-        textSection.style.display = 'none';
-        textcolorSection.style.display = 'none';
-
-    }
-}
-
-const _orig_updateSidebar = updateSidebar;
-updateSidebar = function () {
-    _orig_updateSidebar();
-    updateTextEditSection();
-};
-const _orig_updatePropertiesSidebar = updatePropertiesSidebar;
-updatePropertiesSidebar = function () {
-    _orig_updatePropertiesSidebar();
-    updateTextEditSection();
-};
 
 
-function updatePropertiesSidebar() {
+function renderPropertiesPanel() {
     const el = getSelected();
     if (!el) return;
     const rotateInput = document.getElementById("sidebar-rotate");
@@ -483,6 +476,11 @@ function updatePropertiesSidebar() {
     }
     if (heightInput) heightInput.value = el.height;
 }
+function updatePropertiesSidebar() {
+    renderPropertiesPanel();
+    updateTextEditSection();
+}
+
 function normalizeZIndex() {
     state.elements.forEach((el, index) => {
         el.zIndex = index + 1;
@@ -541,6 +539,7 @@ if (sidebarBgColorNoneBtn) {
         updateSidebarColorValue('none');
     });
 }
+
 const sidebarBorderColorInput = document.getElementById("sidebar-border-color");
 const sidebordercolorvalue = document.getElementById('sidebar-border-color-value')
 
@@ -865,7 +864,7 @@ function downloadFile(filename, content, mimeType) {
 function exportAsJSON() {
     const exportData = {
         version: "1.0",
-        exportedAt: new Date().toISOString(),
+        exportedAt: new Date().toLocaleString(),
         canvas: {
             width: myCanvas.clientWidth,
             height: myCanvas.clientHeight
@@ -874,14 +873,13 @@ function exportAsJSON() {
     };
 
     const json = JSON.stringify(exportData, null, 2);
-    downloadFile("design.json", json, "application/json");
+    downloadFile("figma.json", json, "application/json");
 }
 function exportAsHTML() {
     const canvasWidth = myCanvas.clientWidth;
     const canvasHeight = myCanvas.clientHeight;
 
     const elementsHTML = state.elements.map(el => {
-        // Basic style properties with safeguards/defaults for missing values
         const x = typeof el.x === 'number' ? el.x : 0;
         const y = typeof el.y === 'number' ? el.y : 0;
         const width = typeof el.width === 'number' ? el.width : 100;
@@ -908,13 +906,11 @@ function exportAsHTML() {
         ].join("; ");
 
         if (el.type === "text") {
-            // Text element: handle font size, color, bold, font family, letter spacing (if available)
             const fontSize = typeof el.fontSize === 'number' ? el.fontSize + "px" : "18px";
             const color = el.color || "#fff";
             const fontWeight = el.fontWeight || "bold";
             const fontFamily = el.fontFamily || "sans-serif";
             const letterSpacing = typeof el.letterSpacing === 'number' ? `${el.letterSpacing}px` : "normal";
-            // Padding for aesthetics
             const padding = typeof el.padding === 'number' ? `${el.padding}px` : "4px 8px";
 
             return `
@@ -937,7 +933,6 @@ function exportAsHTML() {
             `;
         }
 
-        // Rectangle or other supported shapes
         return `<div style="${baseStyles}"></div>`;
     }).join("\n");
 
@@ -962,7 +957,7 @@ function exportAsHTML() {
 </html>
     `.trim();
 
-    downloadFile("design.html", html, "text/html");
+    downloadFile("figmadesign.html", html, "text/html");
 }
 document.getElementById("exportJsonBtn")?.addEventListener("click", exportAsJSON);
 document.getElementById("exportHtmlBtn")?.addEventListener("click", exportAsHTML);
